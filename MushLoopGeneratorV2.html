@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>キノコループ生成器 / Mushloop Generator</title>
+    <style>
+        body {
+            font-family: 'Meiryo', 'メイリオ', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .warning {
+            color: #d32f2f;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .version {
+            color: #666;
+            text-align: center;
+            font-size: 0.9em;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .input-section {
+            margin-bottom: 20px;
+        }
+        .input-section label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-section input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .result-item {
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        #progress {
+            width: 100%;
+            background-color: #ddd;
+            margin-top: 10px;
+            display: none;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+        }
+        .result-count {
+            text-align: center;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            padding: 10px;
+        }
+        footer a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>キノコループ生成器 / Mushloop Generator</h1>
+    <div class="container">
+        <p class="warning">奇数周期のループは生成できません / Odd-period loops cannot be generated</p>
+        <p class="version">Ver 1.0.0 Last Update: 2025/5/17</p>
+        <div class="input-section">
+            <label for="period">周期/Period[f]:</label>
+            <input type="number" id="period" min="1" value="34">
+        </div>
+        
+        <div class="input-section">
+            <label for="displayCount">表示する結果の数 (Results to display):</label>
+            <input type="number" id="displayCount" min="1" value="1">
+        </div>
+
+        <button id="calculate">計算開始</button>
+        
+        <div id="progress">
+            <div id="progress-bar">0%</div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // 定数
+        const s = 16;
+        const MAX = 10000;
+        const UNUSED = 0;
+        const VALID = 1;
+        const INVALID = 2;
+
+        document.getElementById('calculate').addEventListener('click', function() {
+            const t = parseInt(document.getElementById('period').value);
+            const dispMAX = parseInt(document.getElementById('displayCount').value);
+            
+            if (isNaN(t) || t <= 0) {
+                alert('有効な周期を入力してください');
+                return;
+            }
+            
+            if (isNaN(dispMAX) || dispMAX <= 0) {
+                alert('有効な表示数を入力してください');
+                return;
+            }
+            
+            // 計算の実行
+            calculateResults(t, dispMAX);
+        });
+
+        function goodr(r) {
+            return (r === 0); // 左右オプションは今後加える可能性があるが、今は坂で表現できるr==0のものだけ
+        }
+
+        function calculateResults(t, dispMAX) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="result-count">計算中...</div>';
+            
+            // プログレスバーの表示
+            const progressContainer = document.getElementById('progress');
+            const progressBar = document.getElementById('progress-bar');
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            
+            console.log("計算開始: t = " + t);
+            
+            // 結果を格納する配列
+            const result = new Array(MAX);
+            for (let k = 0; k < MAX; k++) {
+                result[k] = new Array(8);
+                result[k][7] = UNUSED;
+            }
+            
+            // 非同期で計算を行う
+            setTimeout(() => {
+                let i = 0;
+                
+                // 各パラメータの組み合わせをチェック
+                let aMax = Math.ceil(t / (2 * s));
+                for (let a = 0; a <= aMax; a++) {
+                    // プログレスバーの更新（a値に基づいて簡易的に）
+                    updateProgressBar(a, t);
+                    
+                    for (let b = 0; b <= Math.ceil(t / (s * Math.sqrt(2))); b++) {
+                        for (let c = 0; c <= Math.ceil(t / (2 * s * Math.sqrt(5))); c++) {
+                            for (let d = 0; d <= 1; d++) {
+                                for (let e = 0; e <= 1; e++) {
+                                    for (let f = 0; f <= 1; f++) {
+                // 計算の正確さのためにfloorとceilを見直す
+                const middle = 2 * Math.floor(
+                    (c + e / 4.0 + 3 * f / 4.0) * (2 * s * Math.sqrt(5)) +
+                    (b + d / 2.0) * (s * Math.sqrt(2)) +
+                    a * s + 1
+                );
+                                        
+                                        
+                                        // 重要なケースのデバッグ出力
+                                        if (a === 1 && b === 0 && c === 0 && d === 0 && e === 0 && f === 0) {
+                                            console.log(`a=${a}, b=${b}, c=${c}, d=${d}, e=${e}, f=${f}`);
+                                            console.log(`middle = ${middle}, t = ${t}`);
+                                        }
+                                        
+                                        if (i >= MAX) {
+                                            console.log("Result array is full!");
+                                            break;
+                                        }
+                                        
+                                        if (middle > t || d + e + f > 2)
+                                            continue;
+                                            
+                                        // bが1以上またはcが1以上のときには、a+d+e+fの和が2以上必要
+                                        if ((b >= 1 || c >= 1) && (a + d + e + f < 2))
+                                            continue;
+                                        
+                                        if (t - 32 < middle && middle <= t) {
+                                            result[i][0] = a;
+                                            result[i][1] = b;
+                                            result[i][2] = c;
+                                            result[i][3] = d;
+                                            result[i][4] = e;
+                                            result[i][5] = f;
+                                            result[i][6] = t - middle;
+                                            result[i][7] = VALID;
+                                            i++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // r条件のフィルタ
+                for (let j = 0; j < MAX; j++) {
+                    if (result[j][7] === VALID && !goodr(result[j][6])) {
+                        result[j][7] = INVALID;
+                    }
+                }
+                
+                // VALID数を数える
+                let n = 0;
+                for (let j = 0; j < MAX; j++) {
+                    if (result[j][7] === VALID)
+                        n++;
+                    else if (result[j][7] === UNUSED)
+                        break;
+                }
+                
+                // 結果の表示
+                displayResults(result, n, dispMAX);
+                
+                // プログレスバーを100%に
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+            }, 100); // すぐに計算を始めるが、UIの更新のために少し遅延
+        }
+        
+        function updateProgressBar(currentA, t) {
+            // 簡易的なプログレス計算（実際の進捗とは異なる場合がある）
+            const progressContainer = document.getElementById('progress');
+            const progressBar = document.getElementById('progress-bar');
+            
+            // aの最大値の推定（簡易的）
+            const estimatedMaxA = Math.ceil(t / (2 * s));
+            const progress = Math.min(100, Math.floor((currentA / estimatedMaxA) * 100));
+            
+            progressBar.style.width = progress + '%';
+            progressBar.textContent = progress + '%';
+        }
+        
+        function displayResults(result, n, dispMAX) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            // 結果の件数表示
+            const countDiv = document.createElement('div');
+            countDiv.className = 'result-count';
+            countDiv.textContent = `${n}個の結果が見つかりました`;
+            resultsDiv.appendChild(countDiv);
+            
+            // 結果が0件の場合
+            if (n === 0) {
+                const noResultDiv = document.createElement('div');
+                noResultDiv.className = 'result-item';
+                noResultDiv.textContent = '条件を満たす結果がありませんでした。';
+                resultsDiv.appendChild(noResultDiv);
+                return;
+            }
+            
+            // 表示件数のカウント
+            let countdisp = 0;
+            
+            // 結果の表示
+            for (let j = 0; j < MAX && countdisp < Math.min(dispMAX, n); j++) {
+                if (result[j][7] === VALID) {
+                    if (result[j][6] === 0) {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'result-item';
+                        
+                        // 地形はa+1で表示
+                        const groundValue = result[j][0] + 1;
+                        const steepSlopeValue = result[j][1] + result[j][3] / 2.0;
+                        const gentleSlopeValue = result[j][2] + result[j][4] / 4.0 + 3 * result[j][5] / 4.0;
+                        
+                        resultItem.innerHTML = `
+                            <strong>結果 ${countdisp + 1}</strong><br>
+                            地形 (Ground): ${groundValue}<br>
+                            急な坂 (Steep Slope): ${steepSlopeValue.toFixed(2)}<br>
+                            緩やかな坂 (Gentle Slope): ${gentleSlopeValue.toFixed(2)}
+                        `;
+                        
+                        resultsDiv.appendChild(resultItem);
+                        countdisp++;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
