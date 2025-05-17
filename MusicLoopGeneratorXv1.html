@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>キノコループ生成機 / Mushloop Generator</title>
+    <style>
+        body {
+            font-family: 'Meiryo', 'メイリオ', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .warning {
+            color: #d32f2f;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .version {
+            color: #666;
+            text-align: center;
+            font-size: 0.9em;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .credit {
+            color: #666;
+            text-align: center;
+            font-size: 0.8em;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .input-section {
+            margin-bottom: 20px;
+        }
+        .input-section label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-section input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .input-section select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .checkbox-section {
+            margin-bottom: 15px;
+        }
+        .checkbox-section label {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .checkbox-section input {
+            margin-right: 8px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .result-item {
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .internal-values {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #ccc;
+            font-size: 0.9em;
+            color: #666;
+        }
+        #progress {
+            width: 100%;
+            background-color: #ddd;
+            margin-top: 10px;
+            display: none;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+        }
+        .result-count {
+            text-align: center;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            padding: 10px;
+        }
+        footer a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        details.explanation {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        details.explanation summary {
+            padding: 10px 15px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        details.explanation .explanation-content {
+            padding: 15px;
+            background-color: #fdfdfd;
+            border-top: 1px solid #ddd;
+        }
+        details.explanation hr {
+            margin: 15px 0;
+            border: 0;
+            border-top: 1px dashed #ccc;
+        }
+        .important {
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <h1>キノコループ生成機 / Mushloop Generator</h1>
+    <p class="credit">Made by Claude(AI) with N / 5mm (X:@N_SMM2)</p>
+    <div class="container">
+        <p class="warning">奇数周期のループは生成できません / Odd-period loops cannot be generated</p>
+        <p class="version">Ver 1.5.0 Last Update: 2025/5/17</p>
+        
+        <details class="explanation">
+            <summary>説明 / Explanation</summary>
+            <div class="explanation-content">
+                <p>キノコループの周期から配置すべき地形パーツの数を求めてくれます。表示される値はループの横幅ではなく実動距離であり、両端0.5マス分はカウントされていないことに注意が必要です。</p>
+                <p>例えば、[<strong>結果 5</strong> 地面 (Ground): 58+0 急な坂 (Steep Slope): 2 + 0.5 緩やかな坂 (Gentle Slope): 0 + 0.75]と表示された場合には、一方の端に0.75個+0.5マス=2マス(1個)の緩やかな坂、一方の端に0.5個+0.5マス=1マス(1個)の急な坂、その間に58個の地面を置くことを意味します。</p>
+                <p class="important">*のついたものは既知の方程式に当てはまらない挙動を示す可能性があるため、使うのをおすすめしません。</p>
+                <hr>
+                <p>This tool calculates the number of terrain elements needed for a mushroom loop based on its period. The displayed values represent actual travel distance, not loop width, and it's important to note that the 0.5 tiles at both ends are not counted.</p>
+                <p>For example, if you see [<strong>Result 5</strong> Ground: 58+0 Steep Slope: 2 + 0.5 Gentle Slope: 0 + 0.75], it means you should place 0.75+0.5 tiles = 2 tiles (1 piece) of gentle slope at one end, 0.5+0.5 tiles = 1 tile (1 piece) of steep slope at the other end, and 58 ground tiles in between.</p>
+                <p class="important">Results marked with an asterisk (*) may not follow known equations and are not recommended for use.</p>
+            </div>
+        </details>
+        
+        <div class="input-section">
+            <label for="period">周期/Period[f]:</label>
+            <input type="number" id="period" min="2" step="2" value="66">
+        </div>
+        
+        <div class="input-section">
+            <label for="displayCount">表示する結果の数 (Results to display):</label>
+            <input type="number" id="displayCount" min="1" value="5">
+        </div>
+
+        <div class="input-section">
+            <label for="sortOrder">並び替え (Sort Order):</label>
+            <select id="sortOrder">
+                <option value="1">地面の値が大きい順 (Ground value descending)</option>
+                <option value="2">地面の値が小さい順 (Ground value ascending)</option>
+            </select>
+        </div>
+
+        <div class="checkbox-section">
+            <label for="showInternal">
+                <input type="checkbox" id="showInternal">
+                内部値を表示 / Show internal values
+            </label>
+        </div>
+
+        <button id="calculate">計算開始</button>
+        
+        <div id="progress">
+            <div id="progress-bar">0%</div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // 定数
+        const s = 16;
+        const MAX = 10000;
+        const UNUSED = 0;
+        const VALID = 1;
+        const INVALID = 2;
+        let t; // グローバル変数として周期tを宣言
+        
+        // ページロード時にコンソールにバージョン情報を表示
+        console.log("キノコループ生成機 / Mushloop Generator - Ver 1.5.0");
+        console.log("s = " + s);  // sの値を確認
+
+        document.getElementById('calculate').addEventListener('click', function() {
+            t = parseInt(document.getElementById('period').value);
+            const dispMAX = parseInt(document.getElementById('displayCount').value);
+            const sortOrder = parseInt(document.getElementById('sortOrder').value);
+            
+            if (isNaN(t) || t <= 0) {
+                alert('有効な周期を入力してください');
+                return;
+            }
+            
+            // 奇数の周期をチェック
+            if (t % 2 !== 0) {
+                alert('奇数周期のループは生成できません。偶数を入力してください。/ Odd-period loops cannot be generated. Please enter an even number.');
+                return;
+            }
+            
+            // 大きすぎる値のチェック
+            if (t > 6552) {
+                alert('値が大きすぎます / Value is too large');
+                return;
+            }
+            
+            if (isNaN(dispMAX) || dispMAX <= 0) {
+                alert('有効な表示数を入力してください');
+                return;
+            }
+            
+            // 計算の実行
+            calculateResults(t, dispMAX, sortOrder);
+        });
+
+        function calculateResults(t, dispMAX, sortOrder) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="result-count">計算中...</div>';
+            
+            // プログレスバーの表示
+            const progressContainer = document.getElementById('progress');
+            const progressBar = document.getElementById('progress-bar');
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            
+            console.log("計算開始: t = " + t);
+            
+            // 特定の組み合わせをまず確認（t=66の場合）
+            if (t === 66) {
+                console.log("Checking special case for t=66: (a=1, g=2, b=0, c=0, d=0, e=0, f=0)");
+                const a = 1, g = 2, b = 0, c = 0, d = 0, e = 0, f = 0;
+                
+                // 切り捨て前の値を計算
+                const rawValue = (c + e / 4.0 + 3 * f / 4.0) * (s * Math.sqrt(5)) +
+                    (b + d / 2.0) * (s * Math.sqrt(2)) +
+                    (a + g / 2.0) * s + 1.001;
+                
+                // 切り捨て値を計算（小数部分）
+                const cut = rawValue - Math.floor(rawValue);
+                
+                const middle = 2 * Math.floor(rawValue);
+                const r = t - middle;
+                console.log(`Special case: middle=${middle}, r=${r}, cut=${cut.toFixed(4)}`);
+            }
+            
+            // 結果を格納する配列
+            const result = new Array(MAX);
+            for (let k = 0; k < MAX; k++) {
+                result[k] = new Array(10); // cutの追加のため配列サイズを増やす
+                result[k][8] = UNUSED;
+            }
+            
+            // デバッグ用の特定条件カウンター
+            let debugCounter = 0;
+            
+            // 非同期で計算を行う
+            setTimeout(() => {
+                let i = 0;
+                
+                // 各パラメータの組み合わせをチェック
+                let aMax = Math.ceil(t / (2 * s));  // aの最大値を正確に計算
+                for (let a = 0; a <= aMax; a++) {
+                    // プログレスバーの更新（a値に基づいて簡易的に）
+                    updateProgressBar(a, aMax);
+                    
+                    for (let g = 0; g <= 2; g++) {  // gを外側のループに移動して効率化
+                        // aとgの組み合わせによるチェック
+                        if ((a + g / 2.0) * s * 2 > t) {
+                            continue;  // この組み合わせでは周期を超えるため計算しない
+                        }
+                        
+                        for (let b = 0; b <= Math.ceil(t / (s * Math.sqrt(2))); b++) {
+                            for (let c = 0; c <= Math.ceil(t / (2 * s * Math.sqrt(5))); c++) {
+                                for (let d = 0; d <= 2; d++) {  // d,e,f,gは0,1,2を取る
+                                    for (let e = 0; e <= 2; e++) {
+                                        for (let f = 0; f <= 2; f++) {
+                                            // d+e+f+g=2の条件を適用
+                                            if (d + e + f + g !== 2) {
+                                                continue;
+                                            }
+
+                                            // 切り捨て前の値を計算
+                                            const rawValue = (c + e / 4.0 + 3 * f / 4.0) * (s * Math.sqrt(5)) +
+                                                (b + d / 2.0) * (s * Math.sqrt(2)) +
+                                                (a + g / 2.0) * s + 1.001; // 1.001に修正 (丸め誤差を防止)
+                                            
+                                            // 切り捨て値を計算（小数部分）
+                                            const cut = rawValue - Math.floor(rawValue);
+                                            
+                                            // middleの計算
+                                            const middle = 2 * Math.floor(rawValue);
+                                            
+                                            // t=66の場合は重要なパラメータをログ出力
+                                            if (t === 66 && ((a === 1 && g === 2) || (a === 2 && g === 0))) {
+                                                console.log(`Debug: a=${a}, b=${b}, c=${c}, d=${d}, e=${e}, f=${f}, g=${g}, middle=${middle}, t=${t}, r=${t-middle}, cut=${cut.toFixed(4)}`);
+                                                debugCounter++;
+                                            }
+                                            
+                                            if (i >= MAX) {
+                                                console.log("Result array is full!");
+                                                break;
+                                            }
+                                            
+                                            // r(=t-middle)の計算
+                                            const r = t - middle;
+                                            
+                                            // 精度の問題を考慮して、小さな誤差を許容して r=0 と判定
+                                            // 完全に同じ結果を避けるために組み合わせの一意性をチェック
+                                            if (Math.abs(r) < 0.001) { // より厳密な判定
+                                                // 既存の結果と重複がないかチェック
+                                                let isDuplicate = false;
+                                                for (let k = 0; k < i; k++) {
+                                                    if (result[k][8] === VALID && 
+                                                        result[k][0] === a && 
+                                                        result[k][1] === b &&
+                                                        result[k][2] === c &&
+                                                        result[k][3] === d &&
+                                                        result[k][4] === e &&
+                                                        result[k][5] === f &&
+                                                        result[k][7] === g) {
+                                                        isDuplicate = true;
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                if (!isDuplicate) {
+                                                    result[i][0] = a;
+                                                    result[i][1] = b;
+                                                    result[i][2] = c;
+                                                    result[i][3] = d;
+                                                    result[i][4] = e;
+                                                    result[i][5] = f;
+                                                    result[i][6] = r;
+                                                    result[i][7] = g;  // gを保存
+                                                    result[i][8] = VALID;
+                                                    result[i][9] = cut;  // 切り捨て値を保存
+                                                    i++;
+                                                    
+                                                    // デバッグ: 有効な結果を発見した場合にログ出力
+                                                    console.log(`有効な組み合わせ: a=${a}, b=${b}, c=${c}, d=${d}, e=${e}, f=${f}, g=${g}, middle=${middle}, t=${t}, r=${r}, cut=${cut.toFixed(4)}, 地面=${a + g/2 + d/2 + e/2 + f/2}`);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 結果を並び替え
+                sortResults(result, sortOrder);
+                
+                // VALID数を数える
+                let n = 0;
+                for (let j = 0; j < MAX; j++) {
+                    if (result[j][8] === VALID)
+                        n++;
+                    else if (result[j][8] === UNUSED)
+                        break;
+                }
+                
+                // 結果の表示
+                displayResults(result, n, dispMAX);
+                
+                // プログレスバーを100%に
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                
+                // デバッグ情報の表示
+                if (t === 66 || t === 78) {
+                    console.log(`Total debug combinations checked: ${debugCounter}`);
+                }
+                
+                console.log("計算完了");
+            }, 100); // すぐに計算を始めるが、UIの更新のために少し遅延
+        }
+        
+        function sortResults(result, sortOrder) {
+            // 並び替え対象のデータを抽出
+            const validResults = [];
+            for (let j = 0; j < MAX; j++) {
+                if (result[j][8] === VALID) {
+                    validResults.push(result[j]);
+                } else if (result[j][8] === UNUSED) {
+                    break;
+                }
+            }
+            
+            // 地面の値でソート (a + g/2 + d/2 + e/2 + f/2)
+            validResults.sort((a, b) => {
+                const groundValueA = a[0] + a[7]/2 + a[3]/2 + a[4]/2 + a[5]/2;
+                const groundValueB = b[0] + b[7]/2 + b[3]/2 + b[4]/2 + b[5]/2;
+                
+                if (sortOrder === 1) {
+                    return groundValueB - groundValueA; // 大きい順
+                } else {
+                    return groundValueA - groundValueB; // 小さい順
+                }
+            });
+            
+            // 元の配列に戻す
+            for (let j = 0; j < validResults.length; j++) {
+                result[j] = validResults[j];
+            }
+            
+            // 残りをUNUSEDにする
+            for (let j = validResults.length; j < MAX; j++) {
+                if (!result[j]) {
+                    result[j] = new Array(10);
+                }
+                result[j][8] = UNUSED;
+            }
+        }
+        
+        function updateProgressBar(currentA, maxA) {
+            const progressContainer = document.getElementById('progress');
+            const progressBar = document.getElementById('progress-bar');
+            
+            const progress = Math.min(100, Math.floor((currentA / maxA) * 100));
+            
+            progressBar.style.width = progress + '%';
+            progressBar.textContent = progress + '%';
+        }
+        
+        function displayResults(result, n, dispMAX) {
+            const resultsDiv = document.getElementById('results');
+            const showInternal = document.getElementById('showInternal').checked;
+            resultsDiv.innerHTML = '';
+            
+            // 結果の件数表示
+            const countDiv = document.createElement('div');
+            countDiv.className = 'result-count';
+            countDiv.textContent = `${n}個の結果が見つかりました`;
+            resultsDiv.appendChild(countDiv);
+            
+            // 結果が0件の場合
+            if (n === 0) {
+                const noResultDiv = document.createElement('div');
+                noResultDiv.className = 'result-item';
+                noResultDiv.textContent = '条件を満たす結果がありませんでした。';
+                resultsDiv.appendChild(noResultDiv);
+                return;
+            }
+            
+            // 表示件数のカウント
+            let countdisp = 0;
+            
+            // 結果の表示
+            for (let j = 0; j < MAX && countdisp < Math.min(dispMAX, n); j++) {
+                if (result[j][8] === VALID) {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'result-item';
+                    
+                    // 値の取得
+                    const a = result[j][0];
+                    const b = result[j][1];
+                    const c = result[j][2];
+                    const d = result[j][3];
+                    const e = result[j][4];
+                    const f = result[j][5];
+                    const g = result[j][7];
+                    const cut = result[j][9]; // 切り捨て値
+                    
+                    // 切り捨て値が0.9以上の場合、アスタリスクを表示
+                    const asterisk = cut >= 0.9 ? '*' : '';
+                    
+                    // 地面の値の計算と表示
+                    const groundA = a;
+                    const groundG = g/2;
+                    const groundGDisplay = groundG === Math.floor(groundG) ? 
+                        groundG : groundG.toFixed(1);
+                    
+                    // 急な坂の計算値
+                    const steepB = b;
+                    const steepD = d/2;
+                    // 小数点以下がない場合は整数表示、ある場合は小数点表示
+                    const steepDDisplay = steepD === Math.floor(steepD) ? 
+                        steepD : steepD.toFixed(1);
+                    
+                    // 緩やかな坂の計算値
+                    const gentleC = c;
+                    const gentleEF = e/4 + 3*f/4;
+                    // 小数点以下がない場合は整数表示、ある場合は小数点表示
+                    const gentleEFDisplay = gentleEF === Math.floor(gentleEF) ? 
+                        gentleEF : gentleEF.toFixed(2);
+                    
+                    let resultHTML = `
+                        <strong>結果 ${countdisp + 1}${asterisk}</strong><br>
+                        地面 (Ground): ${groundA}+${groundGDisplay}<br>
+                        急な坂 (Steep Slope): ${steepB} + ${steepDDisplay}<br>
+                        緩やかな坂 (Gentle Slope): ${gentleC} + ${gentleEFDisplay}
+                    `;
+                    
+                    // 内部値の表示オプションがONの場合
+                    if (showInternal) {
+                        resultHTML += `
+                        <div class="internal-values">
+                            パラメータ: a=${a}, b=${b}, c=${c}, d=${d}, e=${e}, f=${f}, g=${g}<br>
+                            切り捨て値 (Cut value): ${cut.toFixed(4)}
+                        </div>`;
+                    }
+                    
+                    resultItem.innerHTML = resultHTML;
+                    
+                    resultsDiv.appendChild(resultItem);
+                    countdisp++;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
